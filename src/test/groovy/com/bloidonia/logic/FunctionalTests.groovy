@@ -87,6 +87,96 @@ class FunctionalTests extends spock.lang.Specification {
             }
     }
 
+    def "teacupo closure"() {
+        setup:
+            def logic = new Logic()
+            def teacupo = logic.with {
+                { v ->
+                    conde( all( eq( 'tea', v ),
+                                succeed() ),
+                           all( eq( 'cup', v ),
+                                succeed() ) )
+                }
+            }
+
+        expect:
+            with( logic ) {
+                fresh { x, y, q ->
+                    run( q, teacupo( q ) ) } == [ 'tea', 'cup' ]
+
+                fresh { x, y, q ->
+                    run( q, all( conde( all( teacupo( x ),
+                                             eq( true, y ),
+                                             succeed() ),
+                                        all( eq( false, x ),
+                                             eq( true, y ) ) ),
+                                 eq( [ x, y ], q ) ) ) } == [ [ false, true ], [ 'tea', true ], [ 'cup', true ] ]
+            }
+    }
+
+    def "eq checks"() {
+        setup:
+            def logic = new Logic()
+
+        expect:
+            with( logic ) {
+                fresh { q, x, y, z, x_ ->
+                    run( q, all( conde( all( eq( y, x ),
+                                             eq( z, x_ ) ),
+                                        all( eq( y, x_ ),
+                                             eq( z, x ) ) ),
+                                 eq( [ y, z ], q ) ) ) } == [ [ "_0", "_1" ], [ "_0", "_1" ] ]
+
+                fresh { q, x, y, z, x_ ->
+                    run( q, all( conde( all( eq( y, x ),
+                                             eq( z, x_ ) ),
+                                        all( eq( y, x_ ),
+                                             eq( z, x ) ) ),
+                                 eq( false, x ),
+                                 eq( [ y, z ], q ) ) ) } == [ [ false, "_0" ], [ "_0", false ] ]
+
+                fresh { q ->
+                    def b = eq( false, q )
+                    run( q, b ) } == [ false ]
+
+                fresh { x, q ->
+                    def b = all( eq( x, q ),
+                                 eq( false, x ) )
+                    run( q, b ) } == [ false ]
+
+                fresh { x, y, q ->
+                    run( q, eq( [ x, y ], q ) ) } == [ [ '_0', '_1' ] ]
+
+                fresh { v, w, q ->
+                    def (x, y) = [ v, w ]
+                    run( q, eq( [ x, y ], q ) ) } == [ [ '_0', '_1' ] ]
+
+                fresh { q, r, s ->
+                    run( q, all( eq( [ r, s ], [ q, q ] ), eq( true, q ) ) ) } == [ true ]
+
+                fresh { q ->
+                    run( q, fresh { r -> eq( r, false ) } ) } == [ '_0' ]
+            }
+    }
+
+    def "listo tests"() {
+        setup:
+            def logic = new Logic()
+        expect:
+            with( logic ) {
+                fresh { q ->
+                    run( q, listo( buildList( [ 'a', 'b', q, 'd' ] ) ) ) } == [ '_0' ]
+                    
+                fresh { q ->
+                    run( 5, q, listo( [ 'a', [ 'b', [ 'c', q ] ] ] ) ) }   == [ buildList( [] ),
+                                                                                buildList( [ '_0' ] ),
+                                                                                buildList( [ '_0', '_1' ] ),
+                                                                                buildList( [ '_0', '_1', '_2' ] ),
+                                                                                buildList( [ '_0', '_1', '_2', '_3' ] ) ]
+            }
+    }
+
+    // Does the list contain 2 elements
     def "pairo tests"() {
         setup:
             def logic = new Logic()
@@ -100,4 +190,17 @@ class FunctionalTests extends spock.lang.Specification {
                                  eq( true, q ) ) ) } == []
             }
     }
+
+    def "membero test"() {
+        setup:
+            def logic = new Logic()
+        expect:
+            with( logic ) {
+                // Find all q that are a member of [ 1, 2, 3 ] and [ 2, 3, 4 ]
+                fresh { q ->
+                    run( q, membero( q, buildList( [ 1, 2, 3 ] ) ),
+                            membero( q, buildList( [ 2, 3, 4 ] ) ) ) } == [ 2, 3 ]
+            }
+    }
+
 }
