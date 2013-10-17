@@ -86,4 +86,18 @@ class FunctionalTests extends spock.lang.Specification {
                                         eq( [ x, y, 'soup' ], q ) ) } )       == [ [ 'split', 'pea', 'soup' ], [ 'navy', 'bean', 'soup' ] ]
             }
     }
+
+    def "pairo tests"() {
+        setup:
+            def logic = new Logic()
+        expect:
+            with( logic ) {
+                fresh { q ->
+                    run( q, all( pairo( [ q, q ] ),
+                                 eq( true, q ) ) ) } == [ true ]
+                fresh { q ->
+                    run( q, all( pairo( [] ),
+                                 eq( true, q ) ) ) } == []
+            }
+    }
 }
