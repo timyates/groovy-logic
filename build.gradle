@@ -1,0 +1,81 @@
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+group               = 'com.bloidonia'
+version             = '0.1-SNAPSHOT'
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+compileGroovy.options.compilerArgs << "-Xlint:unchecked"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile     'org.codehaus.groovy:groovy-all:2.1.8'
+    testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
+}
+
+uploadArchives.dependsOn( test )
+
+if( !hasProperty( 'sonatypeUsername' ) ) {
+    ext.sonatypeUsername = ''
+}
+
+if( !hasProperty( 'sonatypePassword' ) ) {
+    ext.sonatypePassword = ''
+}
+
+ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
+
+signing {
+    required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom( deployment ) }
+ 
+            repository( url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/" ) {
+                authentication( userName: sonatypeUsername, password: sonatypePassword )
+            }
+
+            snapshotRepository( url: "https://oss.sonatype.org/content/repositories/snapshots/" ) {
+                authentication( userName: sonatypeUsername, password: sonatypePassword )
+            }
+
+            pom.project {
+                name 'Groovy Logic'
+                description 'A miniKanren implemented in Groovy'
+                url 'http://github.com/timyates/groovy-logic'
+                inceptionYear '2013'
+
+                scm {
+                    url 'http://github.com/timyates/groovy-logic'
+                    connection 'scm:https://github.com/timyates/groovy-logic.git'
+                    developerConnection 'scm:git://github.com/timyates/groovy-logic.git'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'tim_yates'
+                        name 'Tim Yates'
+                        email 'tim.yates@gmail.com'
+                    }
+                }
+            }
+        }
+    }
+}
